@@ -24,3 +24,4 @@ tqdm==4.65.0
 tzdata==2023.3
 Werkzeug==2.3.4
 xgboost==1.5.0
+gunicorn==19.7.1
