@@ -4,6 +4,8 @@ import joblib
 from bs4 import BeautifulSoup
 import pandas as pd
 from urllib.request import urlopen, Request
+import nltk
+nltk.download('vader_lexicon')
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from textblob import TextBlob
 import warnings
