@@ -1,11 +1,8 @@
-from flask import Flask, render_template, request, jsonify
-import random
+from flask import Flask,jsonify
 import joblib
 from bs4 import BeautifulSoup
 import pandas as pd
 from urllib.request import urlopen, Request
-import nltk
-nltk.download('vader_lexicon')
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from textblob import TextBlob
 import warnings
@@ -23,9 +20,10 @@ app = Flask(__name__)
 @app.route("/predict/<tick>", methods=["GET"])
 def predict(tick):
     prediction = extractor(tick)
-    pred = str(prediction[0])
+    print(prediction)
+    pred = str(prediction[0][0])
 
-    return jsonify({"data": pred})
+    return jsonify({"data": pred, "name": prediction[1]})
 
 
 def data_cleaning(text):
@@ -35,7 +33,7 @@ def data_cleaning(text):
     return cleaned
 
 
-def predict(text):
+def predict(text, name):
     vader = SentimentIntensityAnalyzer()
     # Custom stock-related words
     new_words = {
@@ -101,8 +99,8 @@ def predict(text):
     reg = joblib.load("model_jlib")
     predictions = reg.predict(scores_df)
 
-    # print(predictions)
-    return predictions
+    print(predictions)
+    return predictions, name
 
 
 def extractor(ticker):
@@ -114,6 +112,7 @@ def extractor(ticker):
     req = Request(url=url, headers={"User-Agent": "Chrome"})
     response = urlopen(req)
     html = BeautifulSoup(response, "html.parser")
+    name = html.find(class_="text-blue-500").find("b").text
     news_table = html.find(id="news-table")
     news_tables[tick] = news_table
     news_list = []
@@ -143,7 +142,7 @@ def extractor(ticker):
 
     clean_text = data_cleaning(news_df[["headline"]])
 
-    return predict(clean_text)
+    return predict(clean_text,name)
 
 
 if __name__ == "__main__":
