@@ -22,10 +22,9 @@ app = Flask(__name__)
 @app.route("/predict/<tick>", methods=["GET"])
 def predict(tick):
     prediction = extractor(tick)
-    print(prediction)
-    pred = str(prediction[0][0])
+    pred = str(prediction[0])
 
-    return jsonify({"data": pred, "name": prediction[1]})
+    return jsonify({"data": pred})
 
 
 def data_cleaning(text):
@@ -35,7 +34,7 @@ def data_cleaning(text):
     return cleaned
 
 
-def predict(text, name):
+def sent_prediction(text):
     vader = SentimentIntensityAnalyzer()
     # Custom stock-related words
     new_words = {
@@ -101,8 +100,7 @@ def predict(text, name):
     reg = joblib.load("model_jlib")
     predictions = reg.predict(scores_df)
 
-    print(predictions)
-    return predictions, name
+    return predictions
 
 
 def extractor(ticker):
@@ -114,37 +112,39 @@ def extractor(ticker):
     req = Request(url=url, headers={"User-Agent": "Chrome"})
     response = urlopen(req)
     html = BeautifulSoup(response, "html.parser")
-    name = html.find(class_="text-blue-500").find("b").text
+    # name = html.find(class_="text-blue-500").find("b").text
     news_table = html.find(id="news-table")
     news_tables[tick] = news_table
     news_list = []
-
-    # Extracting first 25 news article
-    count = 0
-    for file_name, news_table in news_tables.items():
-        for i in news_table.findAll("tr"):
-            if count < 25:
-                count += 1
-                text = i.a.get_text()
-                date_scrape = i.td.text.split()
-                if len(date_scrape) == 1:
-                    time = date_scrape[0]
+    if(news_table):
+        # Extracting first 25 news article
+        count = 0
+        for file_name, news_table in news_tables.items():
+            for i in news_table.findAll("tr"):
+                if count < 25:
+                    count += 1
+                    text = i.a.get_text()
+                    date_scrape = i.td.text.split()
+                    if len(date_scrape) == 1:
+                        time = date_scrape[0]
+                    else:
+                        date = date_scrape[0]
+                        time = date_scrape[1]
+                    tick = file_name.split("_")[0]
+                    news_list.append([tick, date, time, text])
                 else:
-                    date = date_scrape[0]
-                    time = date_scrape[1]
-                tick = file_name.split("_")[0]
-                news_list.append([tick, date, time, text])
-            else:
-                break
+                    break
 
-    columns = ["ticker", "date", "time", "headline"]
-    news_df = pd.DataFrame(news_list, columns=columns)
+        columns = ["ticker", "date", "time", "headline"]
+        news_df = pd.DataFrame(news_list, columns=columns)
 
-    # calling data cleaning
+        # calling data cleaning
 
-    clean_text = data_cleaning(news_df[["headline"]])
+        clean_text = data_cleaning(news_df[["headline"]])
 
-    return predict(clean_text,name)
+        return sent_prediction(clean_text)
+    else:
+        return 'N'
 
 
 if __name__ == "__main__":
